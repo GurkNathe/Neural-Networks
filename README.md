@@ -13,7 +13,11 @@ My intent with this project is to create an object oriented neural network that 
 To use the neural network in its current form, you need training data, labels for the training data, and a list of the layers' node counts.
 
 ```
-network = Network(data, labels, [784, 100, 10])
+# Loading MNIST dataset from tensorflow
+(x_train, y_train), (x_test, y_test) = mnist.load_data(path="mnist.npz")
+x_train = np.reshape(x_train, (x_train.shape[0],784), order='C')
+
+network = Network(x_train, y_train, [784, 100, 10])
 ```
 
 The gradient descent function is then called on the network to train it. This takes in two optional arguments: ```epochs``` (number of iterations), ```learning_rate``` (scaling factor while training). The default value for ```epochs``` is 3 and the default value for ```learning_rate``` is 0.1.
