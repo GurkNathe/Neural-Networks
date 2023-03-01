@@ -43,6 +43,8 @@ For the file, the ```n``` is the sum of the number of layers in the network, exc
 
 The ```load_model()``` function take a required parameter ```file_path``` which is the relative path to the model file. This will set the layers, weights, and biases for the network. However, training data is still needed (for now) to use the predict function.
 
+In the ```/models``` directory, there is an example model file. It is a network trained for the MNIST dataset. To use the model, create your ```Network``` object, like is done above in ```Examples```, then: ```network.load_model("models/Model-Example.csv")```. You can then use the testing function to predict images from the given training data.
+
 ## Testing
 
 To test the network, there is a prediction function implemented: ```predict()```. It takes an optional argument ```index``` for the data point from the dataset to be tested against. If no index is given, a random datum is chosen to be tested against.
