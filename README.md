@@ -28,9 +28,20 @@ network.gradient_descent()
 
 ## Save & Loading
 
-Currently, there is no output for the trained network, so it can either be used in a Jypiter notebook, or be trained every run when ran from the command line.
+There are two functions implemented to save and load a model, respectively.
 
-I am working on a way to save the model and load it, however it is still a work in progress, and doesn't work.
+The ```save_model()``` function will save the layer structure, weights, and biases for the network in a CSV file.
+
+Output file format:
+```
+Line 1: [Layer structure]
+Line 2->n: [weights]
+Line n+1->m: [biases]
+```
+
+For the file, the ```n``` is the sum of the number of layers in the network, excluding the input nodes. The value ```m``` is two times the value of ```n```.
+
+The ```load_model()``` function take a required parameter ```file_path``` which is the relative path to the model file. This will set the layers, weights, and biases for the network. However, training data is still needed (for now) to use the predict function.
 
 ## Testing
 

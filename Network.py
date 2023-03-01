@@ -39,7 +39,7 @@ class Network():
                 
                 self.backward_prop(node_values, label, learning_rate)
             # Show accuracy for this epoch
-            print(f"Epoch: {epoch}")
+            print(f"Epoch: {epoch + 1}")
             print(f"Accuracy: {round((correct / self.data.shape[0]) * 100, 2)}%")
             correct = 0
 
@@ -61,7 +61,6 @@ class Network():
             self.biases[i] += -learn_rate * delta
             delta = self.weights[i].T @ delta * (values[i - 1] * (1 - values[i - 1]))
 
-##########WIP###################
     def save_model(self):
         with open(
             path.join(
@@ -72,17 +71,33 @@ class Network():
             newline="",
         ) as myfile:
             wr = csv.writer(myfile, delimiter=",", quotechar="|", quoting=csv.QUOTE_MINIMAL)
-            for layer in self.weights:
-                wr.writerow(layer)
-            for layer in self.biases:
-                wr.writerow(layer)
             wr.writerow(self.layers)
+            for layer in self.weights:
+                for node in layer:
+                    wr.writerow(node)
+            for layer in self.biases:
+                for node in layer:
+                    wr.writerow(node)
 
     def load_model(self, file_path: str):
+        data = []
         with open(file_path, "r") as model_data:
-            model = csv.reader(model_data)
-            print(model)
-#########WIP####################
+            values = csv.reader(model_data, delimiter=',')
+            for row in values:
+                data.append(row)
+
+        # Get the layer sizes
+        self.layers = [int(layer) for layer in data[:1][0]]
+
+        row = 0
+        for i in range(1, len(self.layers)):
+            for node in range(self.layers[i]):
+                self.weights[i - 1][node] = [*map(float, data[node + 1 + row])]
+            row += self.layers[i]
+        for i in range(1, len(self.layers)):
+            for node in range(self.layers[i]):
+                self.biases[i - 1][node] = [*map(float, data[node + 1 + row])]
+            row += self.layers[i]
 
     def predict(self, index: int=-1):
         index = random.randint(0, self.data.shape[0]) if index == -1 else index
