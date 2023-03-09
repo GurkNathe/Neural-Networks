@@ -4,19 +4,18 @@ import matplotlib.pyplot as plt
 
 import timeit
 import csv
-import warnings
+from warnings import warn
 from os import path
-from sys import exit
 
 
 class Network:
     def __init__(
         self,
-        data,
-        labels,
-        layers,
-        testing_data=None,
-        testing_labels=None,
+        data: np.ndarray,
+        labels: np.ndarray,
+        layers: list,
+        testing_data: np.ndarray = None,
+        testing_labels: np.ndarray = None,
     ):
         """
         Initialize a Neural Network
@@ -28,35 +27,35 @@ class Network:
             testing_data (ndarray, optional): testing data for the neural network to predict
             testing_labels (ndarray, optional): testing labels used to confirm predictions
         """
-        self.data = data
-        # Onehot encode the labels if possible
-        self.labels = (
-            np.eye(layers[len(layers) - 1])[labels]
-            if layers is not None and len(layers) > 1
-            else labels
+        self.data = (
+            data if isinstance(data, np.ndarray) else np.array([], dtype=np.uint8)
         )
+
+        # Onehot encode the labels if possible
+        self.labels = np.array([], dtype=np.uint8)
 
         # Data used for prediction function
         self.testing_data = testing_data
         self.testing_labels = testing_labels
 
         # Initialize layer sizes, weights, and biases
-        self.layers = layers
+        self.layers = layers if isinstance(layers, list) else []
         self.weights = []
         self.biases = []
 
         # If there are given layers, initialize weights and biases
-        if layers is not None and len(layers) > 1:
-            self.create_w_b(layers)
+        if len(layers) > 1:
+            self._create_w_b(layers)
+            self.labels = np.eye(layers[-1])[labels]
 
         self.accuracies = []
 
-    def create_w_b(self, layers: list):
+    def _create_w_b(self, layers: list):
         """
         Helper function to create initialize weights and biases
 
         Args:
-            layers (list): list contianing the layer sizes of the network
+            layers (list): list contianing the layer sizes of the network.
         """
         self.weights = [np.array([])] * (len(layers) - 1)
         self.biases = [np.array([])] * (len(layers) - 1)
@@ -69,9 +68,9 @@ class Network:
 
     def gradient_descent(
         self,
-        training_data=None,
-        training_labels=None,
-        layers=None,
+        training_data: np.ndarray = None,
+        training_labels: np.ndarray = None,
+        layers: list = None,
         epochs: int = 3,
         learning_rate: float = 0.1,
         rounding: int = 2,
@@ -80,25 +79,45 @@ class Network:
         Runs the gradient descent algorithm over the training data
 
         Args:
-            testing_data (ndarray, optional): data used for predicting. Defaults to None.
-            testing_labels (ndarray, optional): labels for the testing data. Defaults to None.
+            training_data (ndarray, optional): data used for predicting. Defaults to None.
+            training_labels (ndarray, optional): labels for the training data. Defaults to None.
+            layers (list, optional): list contianing the layer sizes of the network. Defaults to None.
             epochs (int, optional): the number of iterations the algorithm runs.
                 Defaults to 3.
             learning_rate (float, optional): scaling factor for backpropagation.
                 Defaults to 0.1.
-            rounding (int, optional): rounding mode for the accuracy recorded.
+            rounding (int, optional): rounding mode for the accuracy recorded. Defaults to 2.
         """
 
         # Check if all the required data has been loaded into the network
-        if layers is not None:
+        if isinstance(layers, list):
             self.layers = layers
-            self.create_w_b(layers)
-        if training_data is not None:
+            if len(layers) > 1:
+                self._create_w_b(layers)
+        elif layers is not None:
+            warn("Invalid layers type provided.")
+
+        if isinstance(training_data, np.ndarray):
             self.data = training_data
-            if training_labels is not None:
-                self.labels = np.eye(self.layers[len(self.layers) - 1])[training_labels]
+            if isinstance(training_labels, np.ndarray):
+                self.labels = np.eye(self.layers[-1])[training_labels]
             else:
-                warnings.warn("Training data and labels may not align properly.")
+                warn("Training data and labels may not align properly.")
+
+        # Check for invalid typing
+        if not isinstance(epochs, int):
+            print("Invalid type provided for epochs: {}".format(type(epochs)))
+            return
+        if not isinstance(learning_rate, float):
+            print(
+                "Invalid type provided for learning_rate: {}".format(
+                    type(learning_rate)
+                )
+            )
+            return
+        if not isinstance(rounding, int):
+            print("Invalid type provided for rounding: {}".format(type(rounding)))
+            return
 
         self.accuracies = []
         correct = 0
@@ -109,13 +128,11 @@ class Network:
                 label.shape += (1,)
 
                 # Forward propagation
-                node_values = self.forward_prop(item)
+                node_values = self._forward_prop(item)
 
-                correct += int(
-                    np.argmax(node_values[len(node_values) - 1]) == np.argmax(label)
-                )
+                correct += int(np.argmax(node_values[-1]) == np.argmax(label))
 
-                self.backward_prop(node_values, label, learning_rate)
+                self._backward_prop(node_values, label, learning_rate)
             # Show accuracy for this epoch
             print(f"Epoch: {epoch + 1}")
             print(f"Accuracy: {round((correct / self.data.shape[0]) * 100, rounding)}%")
@@ -124,7 +141,7 @@ class Network:
             )
             correct = 0
 
-    def forward_prop(self, item):
+    def _forward_prop(self, item):
         """
         Runs the forward propagation algorithm on the given item
 
@@ -144,7 +161,7 @@ class Network:
 
         return values
 
-    def backward_prop(self, values: list, label: list, learn_rate: float):
+    def _backward_prop(self, values: list, label: list, learn_rate: float):
         """
         Runs the backward propagation algorithm for the current items
 
@@ -153,7 +170,7 @@ class Network:
             label (list): one-hot encoded label for the current item
             learn_rate (float): scaling factor for changes in weights and biases
         """
-        delta = values[len(values) - 1] - label
+        delta = values[-1] - label
         for i in range(len(self.weights) - 1, 0, -1):
             self.weights[i] += -learn_rate * delta @ values[i - 1].T
             self.biases[i] += -learn_rate * delta
@@ -165,11 +182,7 @@ class Network:
         """
         # Create a new CSV file in the models directory
         # Name schema: model + time_value + accuracy of network
-        accuracy = (
-            self.accuracies[len(self.accuracies) - 1]
-            if len(self.accuracies) > 0
-            else None
-        )
+        accuracy = self.accuracies[-1] if len(self.accuracies) > 0 else None
         with open(
             path.join(
                 path.dirname(__file__),
@@ -201,6 +214,9 @@ class Network:
         Args:
             file_path (str): relative path to the model file
         """
+        if not isinstance(file_path, str):
+            print("Invalid type provided for file_path: {}".format(type(file_path)))
+            return
 
         data = []
         # Get all rows of the csv file and add them to a list
@@ -250,25 +266,50 @@ class Network:
             testing_data (ndarray, optional): data used for predicting. Defaults to None.
             testing_labels (ndarray, optional): labels for the testing data. Defaults to None.
         """
+        if index != -1 and not isinstance(index, int):
+            print("Invalid type provided for index: {}".format(type(index)))
+            return
+        if testing_data is not None and not isinstance(testing_data, np.ndarray):
+            print(
+                "Invalid type provided for testing_data: {}".format(type(testing_data))
+            )
+            return
+        if testing_labels is not None and not isinstance(testing_labels, np.ndarray):
+            print(
+                "Invalid type provided for testing_labels: {}".format(
+                    type(testing_labels)
+                )
+            )
+            return
+
         # Testing data and labels for prediction
         if testing_data is not None and testing_labels is not None:
             self.testing_data = testing_data
             self.testing_labels = testing_labels
 
+        if (
+            self.testing_data is None
+            and self.testing_labels is None
+            and self.data is None
+            and self.labels is None
+        ):
+            print("Please provide data and labels for the model to predict.")
+            return
+
         # If there is testing data and labels, use them
         if self.testing_data is not None and self.testing_labels is not None:
-            values, item = self.predict_helper(
+            values, item = self._predict_helper(
                 self.testing_data, index, self.testing_data.shape[0]
             )
         # Otherwise use training data and labels
         elif self.data is not None and self.labels is not None:
-            values, item = self.predict_helper(self.data, index, self.data.shape[0])
+            values, item = self._predict_helper(self.data, index, self.data.shape[0])
 
         plt.imshow(item.reshape(28, 28), cmap="Greys")
-        plt.title(values[len(values) - 1].argmax())
+        plt.title(values[-1].argmax())
         plt.show()
 
-    def predict_helper(self, data, index: int, length: int):
+    def _predict_helper(self, data, index: int, length: int):
         """
         A helper function for the predict function
 
@@ -284,7 +325,7 @@ class Network:
         index = random.randint(0, length) if index == -1 else index
         item = data[index]
         item.shape += (1,)
-        values = self.forward_prop(item)
+        values = self._forward_prop(item)
         return values, item
 
     def show_accuracy(self):
